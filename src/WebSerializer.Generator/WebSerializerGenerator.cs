@@ -1,7 +1,9 @@
 ﻿using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using System;
 using System.Text;
+using System.Text.Encodings.Web;
 
 namespace Proudust.WebSerializer.Generator;
 
@@ -71,16 +73,46 @@ public sealed partial class WebSerializerGenerator : IIncrementalGenerator
             }
             sb.AppendLine();
 
+            var typeKeyword = (typeSymbol.IsRecord, typeSymbol.IsValueType) switch
+            {
+                (true, true) => "record struct",
+                (true, false) => "record",
+                (false, true) => "struct",
+                (false, false) => "class",
+            };
             var typeName = typeSymbol.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat);
             sb.AppendLine($$"""
                 [WebSerializer(typeof({{typeSymbol.Name}}WebFormatter))]
-                partial struct {{typeName}}
+                partial {{typeKeyword}} {{typeName}}
                 {
                     sealed class {{typeSymbol.Name}}WebFormatter : IWebSerializer<{{typeName}}>
                     {
                         public void Serialize(ref WebSerializerWriter writer, {{typeName}} value, WebSerializerOptions options)
                         {
+                """);
 
+            int i = 0;
+            foreach (var member in typeSymbol.GetMembers().OfType<IPropertySymbol>().ToArray())
+            {
+                if (0 < i)
+                {
+                    sb.Append(/* lang=c#-test */ """
+                                    writer.AppendConcatenate();
+
+                        """);
+                }
+
+                sb.Append($$"""
+                                writer.AppendNamePrefix();
+                                writer.AppendRaw("{{UrlEncoder.Default.Encode(member.Name)}}=");
+                                options.GetRequiredSerializer<{{member.Type.Name}}>().Serialize(ref writer, value.{{member.Name}}, options);
+
+                    """);
+
+                i++;
+            }
+
+            sb.AppendLine("""
                         }
                     }
                 }
