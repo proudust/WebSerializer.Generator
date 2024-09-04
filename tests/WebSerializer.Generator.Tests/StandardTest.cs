@@ -3,7 +3,7 @@ using System.Runtime.Serialization;
 using Cysharp.Web;
 using Cysharp.Web.Providers;
 using FluentAssertions;
-using Proudust.WebSerializer.Generator;
+using Proudust.Web;
 
 namespace WebSerializerTests.Generator;
 

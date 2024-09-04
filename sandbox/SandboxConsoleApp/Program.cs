@@ -1,6 +1,6 @@
 ﻿// See https://aka.ms/new-console-template for more information
 using Cysharp.Web;
-using Proudust.WebSerializer.Generator;
+using Proudust.Web;
 using System.Runtime.Serialization;
 
 Console.WriteLine(WebSerializer.ToQueryString("https://www.google.co.jp/search", new UrlParams

@@ -1,16 +1,15 @@
-﻿using System.Runtime.Serialization;
-using System.Text;
+﻿using System.Text;
 using System.Text.Encodings.Web;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
-namespace Proudust.WebSerializer.Generator;
+namespace Proudust.Web;
 
 [Generator(LanguageNames.CSharp)]
 public sealed partial class WebSerializerGenerator : IIncrementalGenerator
 {
-    public const string GenerateWebSerializerAttributeFullName = "Proudust.WebSerializer.Generator.GenerateWebSerializerAttribute";
+    public const string GenerateWebSerializerAttributeFullName = "Proudust.Web.GenerateWebSerializerAttribute";
 
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
@@ -20,7 +19,7 @@ public sealed partial class WebSerializerGenerator : IIncrementalGenerator
                 using System;
                 using System.Diagnostics;
 
-                namespace Proudust.WebSerializer.Generator;
+                namespace Proudust.Web;
 
                 [AttributeUsage(AttributeTargets.Class | AttributeTargets.Struct | AttributeTargets.Interface, AllowMultiple = false, Inherited = false)]
                 [Conditional("COMPILE_TIME_ONLY")]
@@ -94,26 +93,22 @@ public sealed partial class WebSerializerGenerator : IIncrementalGenerator
                 """);
 
             int i = 0;
-            foreach (var (member, _) in typeSymbol
+            foreach (var member in typeSymbol
                 .GetMembers()
                 .OfType<IPropertySymbol>()
-                .Select((symbol, i) =>
-                {
-                    var order = symbol.GetAttributes()
-                        .FirstOrDefault(x => x.AttributeClass?.Name is nameof(DataMemberAttribute))
-                        ?.NamedArguments
-                        .FirstOrDefault(x => x.Key is nameof(DataMemberAttribute.Order))
-                        .Value switch
-                    {
-                        { IsNull: true } => i,
-                        { IsNull: false, Value: object v } => (int)v,
-                        _ => throw new NotImplementedException(),
-                    };
-                    return (symbol, order);
-                })
-                .OrderBy((tuple) => tuple.order)
+                .Select((symbol, i) => new TargetTypeMember(symbol, i))
+                .OrderBy((member) => member.Order)
                 .ToArray())
             {
+                if (member.IsNullable)
+                {
+                    sb.Append(/* lang=c#-test */ $$"""
+                        if (value.{{member.MemberName}} is not null)
+                        {
+
+                        """);
+                }
+
                 if (0 < i)
                 {
                     sb.Append(/* lang=c#-test */ """
@@ -124,10 +119,18 @@ public sealed partial class WebSerializerGenerator : IIncrementalGenerator
 
                 sb.Append($$"""
                                 writer.AppendNamePrefix();
-                                writer.AppendRaw("{{UrlEncoder.Default.Encode(member.Name)}}=");
-                                options.GetRequiredSerializer<{{member.Type.Name}}>().Serialize(ref writer, value.{{member.Name}}, options);
+                                writer.AppendRaw("{{UrlEncoder.Default.Encode(member.MemberName)}}=");
+                                options.GetRequiredSerializer<{{member.Type}}>().Serialize(ref writer, value.{{member.MemberName}}, options);
 
                     """);
+
+                if (member.IsNullable)
+                {
+                    sb.Append(/* lang=c#-test */ """
+                        }
+
+                        """);
+                }
 
                 i++;
             }

@@ -6,6 +6,7 @@
     <Nullable>enable</Nullable>
 
     <LangVersion>12</LangVersion>
+    <RootNamespace>Proudust.Web</RootNamespace>
     <IsRoslynComponent>true</IsRoslynComponent>
     <AnalyzerLanguage>cs</AnalyzerLanguage>
 
