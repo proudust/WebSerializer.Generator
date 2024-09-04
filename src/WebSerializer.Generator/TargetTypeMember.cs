@@ -22,9 +22,8 @@ public sealed class TargetTypeMember
             .FirstOrDefault(x => x.Key is nameof(DataMemberAttribute.Order))
             .Value switch
         {
-            { IsNull: true } => order,
-            { IsNull: false, Value: object v } => (int)v,
-            _ => throw new NotImplementedException(),
+            { Value: int v } => v,
+            _ => order,
         };
         Type = symbol.Type.Name;
         IsNullable = !symbol.Type.IsValueType;
