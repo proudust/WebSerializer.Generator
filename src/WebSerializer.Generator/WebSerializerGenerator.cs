@@ -1,9 +1,9 @@
-﻿using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.CSharp;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
-using System;
+﻿using System.Runtime.Serialization;
 using System.Text;
 using System.Text.Encodings.Web;
+using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace Proudust.WebSerializer.Generator;
 
@@ -18,10 +18,12 @@ public sealed partial class WebSerializerGenerator : IIncrementalGenerator
         {
             context.AddSource("GenerateWebSerializerAttribute.g.cs", /* lang=c#-test */ """
                 using System;
+                using System.Diagnostics;
 
                 namespace Proudust.WebSerializer.Generator;
 
                 [AttributeUsage(AttributeTargets.Class | AttributeTargets.Struct | AttributeTargets.Interface, AllowMultiple = false, Inherited = false)]
+                [Conditional("COMPILE_TIME_ONLY")]
                 internal sealed class GenerateWebSerializerAttribute : Attribute;
                 """);
         });
@@ -92,7 +94,25 @@ public sealed partial class WebSerializerGenerator : IIncrementalGenerator
                 """);
 
             int i = 0;
-            foreach (var member in typeSymbol.GetMembers().OfType<IPropertySymbol>().ToArray())
+            foreach (var (member, _) in typeSymbol
+                .GetMembers()
+                .OfType<IPropertySymbol>()
+                .Select((symbol, i) =>
+                {
+                    var order = symbol.GetAttributes()
+                        .FirstOrDefault(x => x.AttributeClass?.Name is nameof(DataMemberAttribute))
+                        ?.NamedArguments
+                        .FirstOrDefault(x => x.Key is nameof(DataMemberAttribute.Order))
+                        .Value switch
+                    {
+                        { IsNull: true } => i,
+                        { IsNull: false, Value: object v } => (int)v,
+                        _ => throw new NotImplementedException(),
+                    };
+                    return (symbol, order);
+                })
+                .OrderBy((tuple) => tuple.order)
+                .ToArray())
             {
                 if (0 < i)
                 {
