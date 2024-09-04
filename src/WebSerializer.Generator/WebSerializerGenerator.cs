@@ -1,4 +1,5 @@
-﻿using System.Text;
+﻿using System.Runtime.Serialization;
+using System.Text;
 using System.Text.Encodings.Web;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -92,13 +93,40 @@ public sealed partial class WebSerializerGenerator : IIncrementalGenerator
                         {
                 """);
 
+            var prefix = typeSymbol.GetAttributes()
+                .FirstOrDefault(x => x.AttributeClass?.Name is nameof(DataContractAttribute))
+                ?.NamedArguments
+                .FirstOrDefault(x => x.Key is nameof(DataContractAttribute.Namespace))
+                .Value switch
+            {
+                { Value: string p } => p,
+                _ => null,
+            };
+            if (prefix is not null)
+            {
+                // FIXME: Double encode
+                sb.Append(/* lang=c#-test */ $$"""
+                        var originalNamePrefix = writer.NamePrefix;
+                        if (writer.NamePrefix == null)
+                        {
+                            writer.NamePrefix = "{{prefix}}";
+                        }
+                        else
+                        {
+                            writer.NamePrefix = originalNamePrefix + "{{prefix}}";
+                        }
+
+                        """);
+            }
+
             int i = 0;
-            foreach (var member in typeSymbol
+            var members = typeSymbol
                 .GetMembers()
                 .OfType<IPropertySymbol>()
-                .Select((symbol, i) => new TargetTypeMember(symbol, i))
-                .OrderBy((member) => member.Order)
-                .ToArray())
+                .Select(symbol => new TargetTypeMember(symbol))
+                .OrderBy(member => member.Order)
+                .ToArray();
+            foreach (var member in members)
             {
                 if (member.IsNullable)
                 {
@@ -119,10 +147,23 @@ public sealed partial class WebSerializerGenerator : IIncrementalGenerator
 
                 sb.Append($$"""
                                 writer.AppendNamePrefix();
-                                writer.AppendRaw("{{UrlEncoder.Default.Encode(member.MemberName)}}=");
+                                writer.AppendRaw("{{UrlEncoder.Default.Encode(member.SerializedName)}}=");
+
+                    """);
+                if (member.WebSerializer is null)
+                {
+                    sb.Append($$"""
                                 options.GetRequiredSerializer<{{member.Type}}>().Serialize(ref writer, value.{{member.MemberName}}, options);
 
                     """);
+                }
+                else
+                {
+                    sb.Append($$"""
+                                new {{member.WebSerializer}}().Serialize(ref writer, value.{{member.MemberName}}, options);
+
+                    """);
+                }
 
                 if (member.IsNullable)
                 {

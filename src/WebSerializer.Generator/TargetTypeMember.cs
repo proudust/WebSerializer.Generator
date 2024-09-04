@@ -1,4 +1,5 @@
 ﻿using System.Runtime.Serialization;
+using Cysharp.Web;
 using Microsoft.CodeAnalysis;
 
 namespace Proudust.Web;
@@ -13,20 +14,37 @@ public sealed class TargetTypeMember
 
     public string MemberName { get; }
 
-    public TargetTypeMember(IPropertySymbol symbol, int order)
-    {
-        var attr = symbol.GetAttributes()
-            .FirstOrDefault(x => x.AttributeClass?.Name is nameof(DataMemberAttribute));
+    public string SerializedName { get; }
 
-        Order = attr?.NamedArguments
+    public string? WebSerializer { get; }
+
+    public TargetTypeMember(IPropertySymbol symbol)
+    {
+        var attrs = symbol.GetAttributes();
+        var dataMemberAttr = attrs.FirstOrDefault(x => x.AttributeClass?.Name is nameof(DataMemberAttribute));
+        var webSerializerAttr = attrs.FirstOrDefault(x => x.AttributeClass?.Name is nameof(WebSerializerAttribute));
+
+        Order = dataMemberAttr?.NamedArguments
             .FirstOrDefault(x => x.Key is nameof(DataMemberAttribute.Order))
             .Value switch
         {
             { Value: int v } => v,
-            _ => order,
+            _ => int.MaxValue,
         };
         Type = symbol.Type.Name;
         IsNullable = !symbol.Type.IsValueType;
         MemberName = symbol.Name;
+        SerializedName = dataMemberAttr?.NamedArguments
+            .FirstOrDefault(x => x.Key is nameof(DataMemberAttribute.Name))
+            .Value switch
+        {
+            { Value: string v } => v,
+            _ => symbol.Name,
+        };
+        WebSerializer = webSerializerAttr?.ConstructorArguments[0] switch
+        {
+            { Value: INamedTypeSymbol webSerializerType } => webSerializerType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat),
+            _ => null,
+        };
     }
 }
