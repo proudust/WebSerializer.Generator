@@ -31,8 +31,8 @@ public sealed class TargetTypeMember
             { Value: int v } => v,
             _ => int.MaxValue,
         };
-        Type = symbol.Type.Name;
-        IsNullable = !symbol.Type.IsValueType;
+        Type = symbol.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+        IsNullable = symbol.Type is { IsValueType: false } or { Name: "Nullable" };
         MemberName = symbol.Name;
         SerializedName = dataMemberAttr?.NamedArguments
             .FirstOrDefault(x => x.Key is nameof(DataMemberAttribute.Name))
