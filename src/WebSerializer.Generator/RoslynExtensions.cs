@@ -4,6 +4,16 @@ namespace Proudust.Web;
 
 public static class RoslynExtensions
 {
+    public static IEnumerable<INamedTypeSymbol> EnumerateContainingTypes(this ISymbol symbol)
+    {
+        INamedTypeSymbol? containingType = symbol.ContainingType;
+        while (containingType is not null)
+        {
+            yield return containingType;
+            containingType = containingType.ContainingType;
+        }
+    }
+
     public static T? GetNamedArgument<T>(this AttributeData attribute, string key, T? defaultValue = default)
     {
         return attribute.NamedArguments.FirstOrDefault(x => x.Key == key).Value switch

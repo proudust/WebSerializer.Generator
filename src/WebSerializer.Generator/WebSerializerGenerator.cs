@@ -69,6 +69,14 @@ public sealed partial class WebSerializerGenerator : IIncrementalGenerator
             }
             sb.AppendLine();
 
+            foreach (var (typeKeyword, name) in type.Parents)
+            {
+                sb.AppendLine($$"""
+                    partial {{typeKeyword}} {{name}}
+                    {
+                    """);
+            }
+
             sb.AppendLine($$"""
                 [WebSerializer(typeof({{type.Name}}WebFormatter))]
                 partial {{type.TypeKeyword}} {{type.Name}}
@@ -152,6 +160,13 @@ public sealed partial class WebSerializerGenerator : IIncrementalGenerator
                     }
                 }
                 """);
+
+            foreach (var _ in type.Parents)
+            {
+                sb.AppendLine($$"""
+                    }
+                    """);
+            }
 
             var fullType = type.FullyQualifiedName
                 .Replace("global::", "")

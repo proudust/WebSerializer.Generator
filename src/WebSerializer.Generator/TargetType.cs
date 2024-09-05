@@ -8,6 +8,8 @@ public sealed class TargetType
 {
     public string? Namespace { get; }
 
+    public (string TypeKeyword, string Name)[] Parents { get; }
+
     public string? Prefix { get; }
 
     public string TypeKeyword { get; }
@@ -25,6 +27,15 @@ public sealed class TargetType
             { IsGlobalNamespace: false } ns => $"{ns}",
             _ => null,
         };
+        Parents = symbol.EnumerateContainingTypes()
+            .Select(symbol =>
+            {
+                string typeKeyword = symbol.GetTypeKeyword();
+                string name = symbol.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat);
+                return (typeKeyword, name);
+            })
+            .Reverse()
+            .ToArray();
         Prefix = symbol.GetAttributes()
             .FirstOrDefault(x => x.AttributeClass?.Name is nameof(DataContractAttribute))
             ?.GetNamedArgument<string>(nameof(DataContractAttribute.Namespace));
