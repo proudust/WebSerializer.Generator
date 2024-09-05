@@ -3,6 +3,10 @@
     "Generate In SandboxConsoleApp": {
       "commandName": "DebugRoslynComponent",
       "targetProject": "..\\..\\sandbox\\SandboxConsoleApp\\SandboxConsoleApp.csproj"
+    },
+    "Generate In WebSerializer.Generator.Tests": {
+      "commandName": "DebugRoslynComponent",
+      "targetProject": "..\\..\\tests\\WebSerializer.Generator.Tests\\WebSerializer.Generator.Tests.csproj"
     }
   }
 }
