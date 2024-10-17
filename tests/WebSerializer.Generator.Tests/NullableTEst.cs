@@ -6,7 +6,7 @@ using Proudust.Web;
 
 namespace WebSerializerTests.Generator;
 
-public class NullableTest
+public partial class NullableTest
 {
     private static readonly WebSerializerOptions options = WebSerializerOptions.Default with
     {
@@ -18,6 +18,7 @@ public class NullableTest
             CollectionWebSerializerProvider.Instance,
             ObjectFallbackWebSerializerProvider.Instance,
             // ObjectGraphWebSerializerProvider.Instance,
+            GenerateWebSerializerProvider.Instance,
         ]),
     };
 
@@ -46,9 +47,11 @@ public class NullableTest
 
         WebSerializer.ToQueryString(a, options).Should().Be("Afoo=100&Ctor=999");
     }
+
+    [WebSerializable<NullableRequest>]
+    sealed partial class GenerateWebSerializerProvider;
 }
 
-[GenerateWebSerializer]
 public partial class NullableRequest
 {
     public int? Afoo { get; set; }

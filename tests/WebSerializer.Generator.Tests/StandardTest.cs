@@ -7,7 +7,7 @@ using Proudust.Web;
 
 namespace WebSerializerTests.Generator;
 
-public class StandardTest
+public partial class StandardTest
 {
     private static readonly WebSerializerOptions options = WebSerializerOptions.Default with
     {
@@ -19,6 +19,7 @@ public class StandardTest
             CollectionWebSerializerProvider.Instance,
             ObjectFallbackWebSerializerProvider.Instance,
             // ObjectGraphWebSerializerProvider.Instance,
+            GenerateWebSerializerProvider.Instance,
         ]),
     };
 
@@ -29,7 +30,7 @@ public class StandardTest
         {
             SortDirection = SortDirection.Default,
             CurrentPage = 10,
-            SortBy = "hoge and “ú–{Œê japanese"
+            SortBy = "hoge and ï¿½ï¿½ï¿½{ï¿½ï¿½ japanese"
         };
 
         var nullReq = new PagingRequest
@@ -57,7 +58,7 @@ public class StandardTest
         {
             SortDirection = SortDirection.Default,
             CurrentPage = 10,
-            SortBy = "hoge and “ú–{Œê japanese"
+            SortBy = "hoge and ï¿½ï¿½ï¿½{ï¿½ï¿½ japanese"
         };
 
         var content = WebSerializer.ToHttpContent(req, options);
@@ -66,7 +67,7 @@ public class StandardTest
 
         var form = new FormUrlEncodedContent([
             new ("CurrentPage", "10" ),
-            new ("SortBy", "hoge and “ú–{Œê japanese" ),
+            new ("SortBy", "hoge and ï¿½ï¿½ï¿½{ï¿½ï¿½ japanese" ),
             new ("SortDirection", "Default" ),
         ]);
 
@@ -83,9 +84,11 @@ public class StandardTest
 
         Assert.Throws<InvalidOperationException>(() => WebSerializer.ToQueryString(r, options));
     }
+
+    [WebSerializable<PagingRequest>]
+    sealed partial class GenerateWebSerializerProvider;
 }
 
-[GenerateWebSerializer]
 public partial class PagingRequest
 {
 

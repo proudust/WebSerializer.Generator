@@ -4,23 +4,19 @@ using Microsoft.CodeAnalysis;
 
 namespace Proudust.Web;
 
-public sealed class TargetType
+public sealed class ProviderType
 {
     public string? Namespace { get; }
 
     public (string TypeKeyword, string Name)[] Parents { get; }
 
-    public string? Prefix { get; }
-
-    public string TypeKeyword { get; }
-
     public string Name { get; }
 
     public string FullyQualifiedName { get; }
 
-    public TargetTypeMember[] Members { get; }
+    public TargetType[] TargetTypes { get; }
 
-    public TargetType(INamedTypeSymbol symbol)
+    public ProviderType(INamedTypeSymbol symbol)
     {
         Namespace = symbol.ContainingNamespace switch
         {
@@ -36,12 +32,29 @@ public sealed class TargetType
             })
             .Reverse()
             .ToArray();
+        Name = symbol.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat);
+        FullyQualifiedName = symbol.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+        TargetTypes = symbol.GetAttributes()
+            .Where(static x => x.AttributeClass?.Name is "WebSerializableAttribute")
+            .Select(static x => new TargetType((INamedTypeSymbol)x.AttributeClass!.TypeArguments[0]))
+            .ToArray();
+    }
+}
+
+public sealed class TargetType
+{
+    public string? Prefix { get; }
+
+    public string Name { get; }
+
+    public TargetTypeMember[] Members { get; }
+
+    public TargetType(INamedTypeSymbol symbol)
+    {
         Prefix = symbol.GetAttributes()
             .FirstOrDefault(x => x.AttributeClass?.Name is nameof(DataContractAttribute))
             ?.GetNamedArgument<string>(nameof(DataContractAttribute.Namespace));
-        TypeKeyword = symbol.GetTypeKeyword();
         Name = symbol.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat);
-        FullyQualifiedName = symbol.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
         Members = symbol
             .GetMembers()
             .OfType<IPropertySymbol>()

@@ -7,7 +7,7 @@ using Proudust.Web;
 
 namespace WebSerializerTests.Generator;
 
-public class AttributeTest
+public partial class AttributeTest
 {
     private static readonly WebSerializerOptions options = WebSerializerOptions.Default with
     {
@@ -19,6 +19,7 @@ public class AttributeTest
             CollectionWebSerializerProvider.Instance,
             ObjectFallbackWebSerializerProvider.Instance,
             // ObjectGraphWebSerializerProvider.Instance,
+            GenerateWebSerializerProvider.Instance,
         ]),
     };
 
@@ -31,10 +32,12 @@ public class AttributeTest
 
         q.Should().Be("tweet.One=9&tweet.twooooo=hoge&tweet.ACustomInt=10000&tweet.NoMember=tako");
     }
+
+    [WebSerializable<MyRequest>]
+    sealed partial class GenerateWebSerializerProvider;
 }
 
 [DataContract(Namespace = "tweet.")]
-[GenerateWebSerializer]
 public partial class MyRequest
 {
     [DataMember(Order = 0)]
